@@ -1,0 +1,97 @@
+name: colegio-vllm-15b
+services:
+  preparar-modelo:
+    platform: linux/amd64
+    image: vllm/vllm-openai-cpu:v0.34.0-x86_64@sha256:b14c3a46a4b08852b32528643e070d57f3731cccb0fa33ef86d4f3b3f8ac36c4
+    entrypoint:
+    - python3
+    - /config/vllm_piloto.py
+    - preparar
+    environment:
+      HF_HUB_DISABLE_TELEMETRY: '1'
+      HF_HUB_DISABLE_XET: '1'
+      HF_HUB_DISABLE_PROGRESS_BARS: '1'
+      VLLM_PILOT_VARIANT: 15b
+    volumes:
+    - modelos:/models
+    - ./scripts/ia/vllm_piloto.py:/config/vllm_piloto.py:ro
+    cap_drop:
+    - ALL
+    security_opt:
+    - no-new-privileges:true
+    mem_limit: 2g
+    logging:
+      driver: local
+      options:
+        max-size: 5m
+        max-file: '2'
+  vllm:
+    platform: linux/amd64
+    image: vllm/vllm-openai-cpu:v0.34.0-x86_64@sha256:b14c3a46a4b08852b32528643e070d57f3731cccb0fa33ef86d4f3b3f8ac36c4
+    user: 10001:10001
+    entrypoint:
+    - python3
+    - /config/vllm_piloto.py
+    - servir
+    environment:
+      HOME: /tmp
+      HF_HOME: /tmp/huggingface
+      HF_HUB_OFFLINE: '1'
+      TRANSFORMERS_OFFLINE: '1'
+      HF_HUB_DISABLE_TELEMETRY: '1'
+      VLLM_NO_USAGE_STATS: '1'
+      DO_NOT_TRACK: '1'
+      VLLM_CACHE_ROOT: /jit/vllm
+      TRITON_CACHE_DIR: /jit/triton
+      TORCHINDUCTOR_CACHE_DIR: /jit/torchinductor
+      TMPDIR: /jit
+      VLLM_CONFIG_ROOT: /tmp/vllm-config
+      VLLM_CPU_KVCACHE_SPACE: '1'
+      VLLM_CPU_OMP_THREADS_BIND: nobind
+      OMP_NUM_THREADS: '4'
+      VLLM_LOGGING_LEVEL: WARNING
+      VLLM_PILOT_VARIANT: 15b
+    ports:
+    - 127.0.0.1:8002:8000
+    volumes:
+    - modelos:/models:ro
+    - ./scripts/ia/vllm_piloto.py:/config/vllm_piloto.py:ro
+    - ./scripts/ia/probar_vllm_piloto.py:/config/probar_vllm_piloto.py:ro
+    - ./scripts/ia/probar_vllm_redaccion.py:/config/probar_vllm_redaccion.py:ro
+    depends_on:
+      preparar-modelo:
+        condition: service_completed_successfully
+    networks:
+    - inferencia
+    read_only: true
+    tmpfs:
+    - /tmp:rw,noexec,nosuid,nodev,uid=10001,gid=10001,mode=1777
+    - /jit:rw,exec,nosuid,nodev,uid=10001,gid=10001,mode=0700,size=1g
+    shm_size: 1g
+    cap_drop:
+    - ALL
+    security_opt:
+    - no-new-privileges:true
+    cpus: 4
+    mem_limit: 18g
+    healthcheck:
+      test:
+      - CMD
+      - python3
+      - -c
+      - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health',
+        timeout=3).close()
+      start_period: 180s
+      interval: 15s
+      timeout: 5s
+      retries: 12
+    logging:
+      driver: local
+      options:
+        max-size: 5m
+        max-file: '2'
+networks:
+  inferencia:
+    internal: true
+volumes:
+  modelos: {}
