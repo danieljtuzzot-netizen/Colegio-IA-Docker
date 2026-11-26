@@ -1,0 +1,14 @@
+# Lista de inclusión: ningún dato, credencial, modelo, log o portal entra al build.
+**
+!scripts/
+!scripts/ia/
+!scripts/ia/*.py
+!scripts/ia/*.html
+!scripts/ia/*.js
+!scripts/ia/*.css
+!scripts/ia/beto_sentimiento_config_v1.json
+!scripts/ia/informatividad_config_v1.json
+!docker/
+!docker/ia/
+!docker/ia/Dockerfile
+!docker/ia/requirements.runtime.lock.txt

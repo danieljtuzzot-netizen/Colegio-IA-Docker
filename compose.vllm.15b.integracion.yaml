@@ -1,0 +1,22 @@
+services:
+  demo:
+    environment:
+      IA_VLLM_ENABLED: '1'
+      IA_VLLM_VARIANT: 15b
+    networks:
+    - modelos
+    - interfaz
+    - vllm_piloto
+    volumes:
+    - ./integracion_vllm/rag_vllm.py:/app/scripts/ia/rag_vllm.py:ro
+    - ./integracion_vllm/rag_respuestas.py:/app/scripts/ia/rag_respuestas.py:ro
+    - ./integracion_vllm/rag_pertinencia.py:/app/scripts/ia/rag_pertinencia.py:ro
+    - ./integracion_vllm/demo_consultas.py:/app/scripts/ia/demo_consultas.py:ro
+    - ./integracion_vllm/demo_consultas.js:/app/scripts/ia/demo_consultas.js:ro
+    - ./integracion_vllm/demo_dashboard.html:/app/scripts/ia/demo_dashboard.html:ro
+    - ./integracion_vllm/demo_local.py:/app/scripts/ia/demo_local.py:ro
+    - ./integracion_vllm/probar_integracion_vllm.py:/app/scripts/ia/probar_integracion_vllm.py:ro
+networks:
+  vllm_piloto:
+    external: true
+    name: colegio-vllm-15b_inferencia

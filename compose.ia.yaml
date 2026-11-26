@@ -1,0 +1,173 @@
+name: colegio-ia-demo
+services:
+  preparar-revisiones:
+    platform: linux/amd64
+    image: colegio-ia-demo:20261117
+    user: "0:0"
+    command:
+      - python
+      - -c
+      - |
+        import os
+        for path in ('/revisiones', '/ollama-modelos'):
+            os.chown(path, 0, 0)
+            os.chmod(path, 0o700)
+            os.chown(path, 10001, 10001)
+    volumes: [revisiones:/revisiones, ollama_modelos:/ollama-modelos]
+    network_mode: none
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [CHOWN]
+    security_opt: [no-new-privileges:true]
+  preparar-modelos:
+    platform: linux/amd64
+    image: colegio-ia-demo:20261117
+    user: "10001:10001"
+    command:
+      - python
+      - -c
+      - |
+        import hashlib, json, os, shutil
+        from pathlib import Path
+        source = Path('/seed')
+        target = Path('/models')
+        marker = target / '.seed_demo_20261117_v1'
+        if not marker.exists():
+            if not (source / 'blobs').is_dir() or not (source / 'manifests').is_dir():
+                raise SystemExit('Exportacion Ollama incompleta: faltan blobs o manifests')
+            shutil.copytree(source, target, dirs_exist_ok=True, copy_function=shutil.copyfile)
+            os.chmod(target, 0o700)
+            marker.write_text('demo_20261117_v1\n', encoding='utf-8')
+            print('Modelos copiados al volumen local de Ollama', flush=True)
+        else:
+            print('Volumen Ollama ya preparado; se conserva su contenido', flush=True)
+        # El export antiguo incluye un envoltorio adicional. El manifiesto fijado
+        # está incluido como blob: restaurarlo sin cambiar la identidad aprobada.
+        expected = '357c53fb659c5076de1d65ccb0b397446227b71a42be9d1603d46168015c9e4b'
+        wrapper = 'cd232a7a8d590449a99eb8fe29b614ef9bf3624d2d17faa496e1135ba4188be0'
+        payload = (source / 'blobs' / ('sha256-' + expected)).read_bytes()
+        if hashlib.sha256(payload).hexdigest() != expected:
+            raise SystemExit('El manifiesto fijado no supera SHA256')
+        manifest = json.loads(payload)
+        paths = [target / 'manifests/registry.ollama.ai/library/qwen2.5/3b',
+                 target / 'manifests-v2/ollama.com/library/qwen2.5/3b']
+        current = [hashlib.sha256(p.read_bytes()).hexdigest() if p.exists() else None for p in paths]
+        if any(value not in (None, expected, wrapper) for value in current):
+            raise SystemExit('Manifiesto de destino desconocido: requiere revision, no se sobrescribe')
+        if any(value != expected for value in current):
+            for item in [manifest['config'], *manifest['layers']]:
+                digest = item['digest']
+                if not digest.startswith('sha256:') or len(digest) != 71 or any(c not in '0123456789abcdef' for c in digest[7:]):
+                    raise SystemExit('Referencia de blob invalida')
+                blob = target / 'blobs' / digest.replace(':', '-')
+                if blob.stat().st_size != item['size']:
+                    raise SystemExit('Tamano de blob incorrecto')
+                with blob.open('rb') as stream:
+                    if hashlib.file_digest(stream, 'sha256').hexdigest() != digest[7:]:
+                        raise SystemExit('Blob distinto al modelo fijado')
+            for path in paths:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                temporary = path.with_name(path.name + '.tmp')
+                temporary.write_bytes(payload)
+                os.replace(temporary, path)
+            print('Manifiestos restaurados al SHA256 fijado; blobs verificados', flush=True)
+    volumes:
+      - type: bind
+        source: ./data/ia/docker/demo_20261117_v1/ollama
+        target: /seed
+        read_only: true
+        bind:
+          create_host_path: false
+      - ollama_modelos:/models
+    depends_on:
+      preparar-revisiones:
+        condition: service_completed_successfully
+    network_mode: none
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+  ollama:
+    platform: linux/amd64
+    image: ollama/ollama:0.40.16@sha256:910d0d8107b538fb0894e63163eb195de0cc7aefcbc666dc62d3b18f71124592
+    user: "10001:10001"
+    environment:
+      HOME: /tmp
+      OLLAMA_HOST: 0.0.0.0:11434
+      OLLAMA_MODELS: /models
+      OLLAMA_NO_CLOUD: "1"
+      OLLAMA_NOHISTORY: "1"
+      OLLAMA_DEBUG: "0"
+      OLLAMA_DEBUG_LOG_REQUESTS: "0"
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_CONTEXT_LENGTH: "4096"
+      CUDA_VISIBLE_DEVICES: "-1"
+    volumes:
+      - ollama_modelos:/models
+    depends_on:
+      preparar-modelos:
+        condition: service_completed_successfully
+    networks: [modelos]
+    read_only: true
+    tmpfs: ["/tmp:uid=10001,gid=10001,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 6g
+    cpus: 4
+    healthcheck:
+      test: [CMD, ollama, list]
+      interval: 15s
+      timeout: 10s
+      retries: 8
+    logging:
+      driver: local
+      options:
+        max-size: 5m
+        max-file: "2"
+  demo:
+    platform: linux/amd64
+    image: colegio-ia-demo:20261117
+    user: "10001:10001"
+    build:
+      context: .
+      dockerfile: docker/ia/Dockerfile
+    environment:
+      IA_RUNTIME: docker
+    ports: [127.0.0.1:8766:8766]
+    volumes:
+      - type: bind
+        source: ./data/ia/docker/demo_20261117_v1/ia
+        target: /app/data/ia
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./data/ia/docker/ml_panel_20261117_v1
+        target: /app/data/ia/ml
+        read_only: true
+        bind:
+          create_host_path: false
+      - revisiones:/app/data/ia/demo_local/revisiones
+    depends_on:
+      preparar-revisiones:
+        condition: service_completed_successfully
+      ollama:
+        condition: service_healthy
+    networks: [modelos, interfaz]
+    read_only: true
+    tmpfs: ["/tmp:uid=10001,gid=10001,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 6g
+    cpus: 4
+    logging:
+      driver: local
+      options:
+        max-size: 5m
+        max-file: "2"
+networks:
+  modelos:
+    internal: true
+  interfaz: {}
+volumes:
+  revisiones: {}
+  ollama_modelos: {}

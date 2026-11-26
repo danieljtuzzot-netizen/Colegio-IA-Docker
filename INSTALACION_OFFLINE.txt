@@ -1,0 +1,36 @@
+INSTALACION SIN INTERNET - NO ES EL MODO PREDETERMINADO
+
+El ZIP incluye pesos BETO, MiniLM y Ollama, pero no imagenes Docker,
+instaladores de Windows/WSL ni los pesos vLLM descargados en volumenes.
+
+Para preparar una entrega realmente offline hace falta un PC con Docker
+que ya haya construido/probado la demo y espacio para los archivos TAR.
+Estos pasos exportan imagenes, no publican nada en un registro:
+
+  docker image save -o imagen-demo.tar colegio-ia-demo:20261117
+  docker image save -o imagen-ollama.tar ollama/ollama:0.40.16
+
+Primero comprobar el nombre/tag local con docker image ls. Guardar tambien
+el RepoDigest y docker image inspect como evidencia de identidad: el paquete
+usa imagenes fijadas por digest y el equipo destino debe poder resolver esa
+misma identidad. Un TAR con un tag igual no prueba identidad o compatibilidad.
+
+En destino con Docker/WSL ya instalados:
+  docker image load -i imagen-demo.tar
+  docker image load -i imagen-ollama.tar
+
+Verificar las identidades requeridas y arrancar sin reconstruir ni descargar:
+  docker compose -f compose.ia.yaml up -d --no-build --pull never --wait --wait-timeout 600
+
+Si una imagen fijada no se resuelve, detener y revisar el inventario. No quitar
+los digests ni reemplazar etiquetas para saltar verificaciones.
+
+Los lanzadores normales construyen la imagen y son para instalacion online.
+Para vLLM offline tambien se necesita su imagen exacta y una exportacion
+verificada del volumen de pesos publicos, con restauracion de permisos y
+manifiesto. Este ZIP no incorpora esa exportacion, y no basta un docker save
+para trasladar los volumenes. La preparacion inicial 1.5B requiere internet
+en el procedimiento normal.
+
+Documentacion oficial: https://docs.docker.com/reference/cli/docker/image/save/
+https://docs.docker.com/reference/cli/docker/image/load/

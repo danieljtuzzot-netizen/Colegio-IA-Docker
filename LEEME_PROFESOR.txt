@@ -1,0 +1,181 @@
+ENTREGA EJECUTABLE DE IA - COLEGIO AMERICANO
+Windows x86-64 / CPU / Docker Desktop / 23 de noviembre de 2026
+
+1. QUE CONTIENE
+
+Esta entrega permite ejecutar el dashboard, informes, BETO entrenado, filtro
+de informatividad, MiniLM, recuperacion RAG y Ollama Qwen 3B. Incluye los
+artefactos agregados del experimento ML ya calculado y la evidencia autorizada
+del piloto RAG de 22 comentarios. No vuelve a entrenar los modelos al abrirlo.
+
+Tambien incluye la integracion opcional vLLM con Qwen2.5-1.5B-Instruct,
+con las correcciones de memoria, JSON compacto y contrato de sintesis.
+
+INCLUIDOS EN EL ZIP:
+- Codigo de ejecucion Python, interfaz HTML/JS/CSS y configuraciones.
+- Dockerfile y dependencias Linux fijadas con hashes.
+- Composiciones Docker, arranque, parada y pruebas.
+- Pesos BETO ajustados, filtro de informatividad y encoder MiniLM.
+- Pesos locales de Qwen 3B para Ollama y manifiesto del modelo fijado.
+- Datos exportados autorizados, indice RAG y resultados agregados del panel ML.
+- Documentacion metodologica, inventario y manifiesto SHA256.
+
+SE DESCARGAN AL INSTALAR POR PRIMERA VEZ:
+- Imagenes Docker y dependencias publicas de la imagen de la demo.
+- Para vLLM: su imagen CPU y Qwen 1.5B, revision fijada y verificada.
+  Los pesos 1.5B son aproximadamente 3,1 GB, mas archivos auxiliares.
+  Quedan en un volumen Docker y se reutilizan en ejecuciones posteriores.
+
+NO INCLUIDOS NI NECESARIOS PARA EJECUTAR ESTA DEMO:
+- XAMPP, PHP, MariaDB, SQL o credenciales de la base institucional.
+- Python u Ollama instalados en Windows, CUDA ni una cuenta de OpenAI.
+- Token de ngrok, correos personales, revisiones del volumen del alumno.
+- Dataset completo de entrenamiento/prueba o reentrenamiento de ML.
+
+Este ZIP no es una instalacion totalmente offline: la primera instalacion
+necesita internet. Para un equipo sin internet, consultar INSTALACION_OFFLINE.txt.
+
+2. EQUIPO Y SOFTWARE
+
+- Windows x86-64 compatible con Docker Desktop y WSL 2.
+- Docker Desktop abierto, motor Linux funcionando y Docker Compose v2.
+- Virtualizacion habilitada y navegador web.
+- Demo base: presupuesto orientativo de 16 GB RAM fisica y 12 GB para Docker.
+  Es una orientacion de recursos, no un minimo medido en todos los equipos.
+- vLLM 1.5B: la configuracion fue probada en un equipo de 32 GB RAM fisica
+  con WSL configurado en 20 GB. CPU x86-64 con AVX2 o AVX512.
+  El lanzador exige al menos 19 GiB efectivos en Docker para esta variante.
+- Reservar inicialmente 40 GB libres para ZIP, extraccion, imagenes, caches,
+  pesos descargados y volumenes. Es margen de planificacion, no consumo medido.
+- GPU no requerida: esta entrega utiliza CPU.
+
+Instalar Docker segun sus instrucciones oficiales y comprobar sus requisitos
+actuales de Windows/WSL: https://docs.docker.com/desktop/setup/install/windows-install/
+CPU vLLM: https://docs.vllm.ai/en/stable/getting_started/installation/cpu/index.html
+
+Comprobaciones en PowerShell:
+  docker version
+  docker compose version
+  docker info --format "{{.OSType}} {{.Architecture}} {{.MemTotal}}"
+
+Si el equipo tiene 32 GB y necesita ampliar el limite WSL, revisar primero
+%USERPROFILE%\.wslconfig. Dentro de su unica seccion [wsl2] se puede configurar
+memory=20GB, preservando otros ajustes. No aplicar ese valor a un equipo de
+16 GB. Guardar trabajo en WSL, salir de Docker Desktop, ejecutar wsl --shutdown
+y abrir Docker Desktop. Este paquete no modifica automaticamente ese archivo.
+
+3. EXTRAER Y VERIFICAR
+
+Extraer el ZIP en C:\Proyectos. El ZIP ya contiene Colegio_IA_Profesor.
+La ruta final de ejemplo es:
+  C:\Proyectos\Colegio_IA_Profesor\compose.ia.yaml
+Se puede usar otra unidad local, manteniendo toda la estructura.
+
+Evitar doble carpeta anidada. Abrir PowerShell en la carpeta extraida:
+  cd "C:\Proyectos\Colegio_IA_Profesor"
+  .\VERIFICAR_ARCHIVOS.cmd
+
+Debe mostrar cero archivos faltantes o diferentes. La comprobacion tarda
+porque calcula hashes de los modelos grandes. No omitir la carpeta data.
+El manifiesto detecta diferencias; su hash externo permite comprobar el ZIP
+recibido cuando se comparte por un canal de confianza.
+
+4. OPCION A: INICIAR DEMO BASE CON OLLAMA
+
+Con Docker Desktop listo, ejecutar:
+  .\INICIAR_PROFESOR.cmd
+
+Este lanzador verifica la entrega, construye la imagen y prepara los modelos
+en volumenes nuevos antes de iniciar los servicios. Esperar su finalizacion.
+La primera instalacion puede tardar por las descargas y la construccion.
+
+Abrir:
+  http://127.0.0.1:8766/dashboard
+
+Laboratorio BETO y tipo de contenido:
+  http://127.0.0.1:8766/
+
+Prueba funcional completa, desde la carpeta principal:
+  docker compose -f compose.ia.yaml exec demo python scripts/ia/probar_docker_ia.py --inferencia
+
+5. OPCION B: INICIAR DASHBOARD CON VLLM 1.5B
+
+Usar esta opcion si el equipo cumple el presupuesto de memoria indicado.
+No es necesario arrancar el piloto 0.5B. Ejecutar:
+  .\INICIAR_VLLM_15B_PROFESOR.cmd
+
+El lanzador construye la imagen de la demo si es necesario y ejecuta
+preparar-modelo antes de servir vLLM. Asi funciona tambien en un equipo que
+todavia no tenga imagenes o volumenes. No utiliza --no-deps para omitir la
+preparacion en la primera instalacion.
+
+Abrir http://127.0.0.1:8766/dashboard y seleccionar vLLM en Consultar con IA.
+Si el navegador conserva una sesion anterior, recargar con Ctrl+F5.
+
+Prueba integrada:
+  docker compose -f compose.ia.yaml -f compose.vllm.15b.integracion.yaml exec demo python scripts/ia/probar_integracion_vllm.py
+
+La aprobacion comprueba respuesta y referencias estructurales. Revisar tambien
+que la redaccion responda la pregunta y no agregue hechos sin respaldo.
+Una abstencion coherente se distingue de una respuesta positiva.
+
+Para cambiar de la variante vLLM a base, detener primero con el comando del
+apartado siguiente. No ejecutar a la vez variantes 0.5B y 1.5B en este equipo.
+
+6. DETENER Y VOLVER A ARRANCAR
+
+Detener conservando modelos y revisiones:
+  .\DETENER_PROFESOR.cmd
+
+Volver a iniciar con el mismo lanzador elegido. Las descargas completadas
+y los datos guardados en volumenes se reutilizan. Nunca agregar -v a down
+si se quieren conservar. Detener no equivale a borrar los datos.
+
+7. DIAGNOSTICO
+
+  docker compose -f compose.ia.yaml ps -a
+  docker compose -f compose.ia.yaml logs --no-color --tail 60 demo ollama preparar-modelos
+  docker compose -f VLLM_15B_PC/compose.vllm.15b.yaml ps -a
+  docker compose -f VLLM_15B_PC/compose.vllm.15b.yaml logs --no-color --tail 80 vllm preparar-modelo
+
+- Pipe/daemon no encontrado: abrir Docker Desktop y esperar al motor.
+- Falta memoria: revisar RAM efectiva de Docker. No borrar modelos/volumenes.
+- Puerto 8766/8002 ocupado: detener una copia anterior antes de arrancar.
+- Preparadores en Exited (0): es correcto, son tareas de una sola ejecucion.
+- Healthy indica disponibilidad del servicio, no exactitud de sus respuestas.
+- Un archivo cambia: conservar la evidencia y revisar, no modificar el hash.
+- Descarga interrumpida: corregir conectividad y repetir el lanzador.
+
+8. ALCANCE DE LA ENTREGA Y PRUEBAS
+
+El flujo anterior de la demo base y la integracion 1.5B fueron ejecutados en
+el PC del alumno y sus salidas se compartieron en el proyecto. Este paquete
+consolidado se verifica por contenido, hashes, rutas y dependencias.
+El equipo que lo empaqueta no dispone de Docker: no se afirma que este ZIP
+nuevo haya sido construido y ejecutado aqui ni en el equipo del profesor.
+La aceptacion en destino requiere ejecutar las pruebas y revisar el dashboard.
+
+El panel ML muestra un experimento congelado de 2026-II. El MAE de 4 pp es
+error medio redondeado del promedio descriptivo; el 23 % es reduccion relativa
+del error frente al control, calculada sin redondear. No es exactitud general.
+
+Esta entrega ejecuta la inferencia y visualiza resultados preparados. No es
+un paquete para repetir todo el entrenamiento o auditar todos los textos.
+Para reproducir investigacion o reentrenar se requiere una entrega adicional
+autorizada de datasets, referencias humanas y protocolo de entrenamiento.
+
+9. PRIVACIDAD Y REFERENCIAS
+
+El paquete contiene datos privados autorizados y referencias por codigos.
+Entregarlo directamente al profesor por un medio institucional autorizado.
+No publicarlo en GitHub, Docker Hub ni enlaces de descarga abiertos.
+La imagen de la demo excluye datos/modelos del contexto de construccion;
+estos se montan por separado en solo lectura.
+
+Ngrok no es necesario para la ejecucion local del profesor. No se incluyen
+cuentas ni politicas personales del alumno. No activar acceso publico por
+el simple hecho de recibir este paquete. Produccion institucional no activada.
+
+Fuentes tecnicas: ver DOCUMENTACION y MODELOS_Y_VERSIONES.txt.
+Esta guia es la referencia de instalacion de esta entrega; algunos documentos
+tecnicos conservan el historial de fallos y estados previos del desarrollo.
