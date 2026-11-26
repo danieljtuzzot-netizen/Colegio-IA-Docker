@@ -1,0 +1,13 @@
+{
+  "version": "informatividad_tfidf_v1",
+  "dataset_version": "20261112_DATASET_BETO_V2",
+  "seed": 42,
+  "class_weight": "balanced",
+  "max_iter": 2000,
+  "C": 1.0,
+  "reglas_version": "ausencia_de_comentario_v1",
+  "ausencias_explicitas": ["n/a", "na", "ninguno", "ninguna", "nada", "sin comentarios", "sin comentario", "no aplica"],
+  "preguntas_abiertas_exactas": ["comentarios y/o recomendaciones"],
+  "test_reserved": true,
+  "requiere_revision_no_informativo": true
+}
